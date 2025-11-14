@@ -1,0 +1,10 @@
+# Binaries
+shuttletracker
+*.test
+*.out
+
+# Go
+go.work
+
+# Environment variables
+.env
