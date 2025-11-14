@@ -20,80 +20,68 @@ A real-time flight tracking and shuttle coordination system for managing airport
 - bcrypt authentication
 - HTML/CSS/JavaScript
 
-## Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/flight-tracker.git
-cd flight-tracker
-```
-
-2. Install dependencies
-```bash
-go mod init shuttletracker
-go get golang.org/x/crypto/bcrypt
-```
-
-3. Set environment variables
-```bash
-export FLIGHTAWARE_API_KEY=your_api_key_here
-export VALET_PASSWORD=your_secure_password
-export DESK_PASSWORD=your_other_password
-```
-
-4. Run the application
-```bash
-go run *.go
-```
-
-5. Access at `http://localhost:8080`
-
 ## Project Structure
 ```
-ShuttleTracker/
+shuttle-coordinator/
 ├── main.go           # Server and HTTP handlers
 ├── auth.go           # Authentication & sessions
-├── flightaware.go    # API client
+├── flightaware.go    # FlightAware API client
 ├── models.go         # Data structures
 ├── template.go       # HTML templates
-├── auth_test.go      # Authentication tests
-├── session_test.go   # Session management tests
-├── password_test.go  # Password hashing tests
-└── go.mod            # Dependencies
+├── tests/
+│   ├── auth_test.go      # Authentication tests
+│   ├── session_test.go   # Session management tests
+│   └── password_test.go  # Password hashing tests
+├── screenshots/          # UI examples
+├── go.mod            # Go dependencies
+└── README.md
 ```
 
-## Testing
+## Key Features Explained
 
-Run the test suite:
-```bash
-go test -v
-```
+### Authentication & Security
+- Bcrypt password hashing with configurable cost factor
+- HTTP-only session cookies prevent XSS attacks
+- SameSite cookie policy prevents CSRF
+- Middleware-protected routes
+- Role-based access (valet, desk, demo)
 
-## Authentication
+### Flight Tracking
+- Real-time data from FlightAware AeroAPI
+- Automatic timezone conversion to Mountain Time
+- Delay calculation and visual indicators
+- Scheduled vs. expected arrival times
+- Flight status monitoring (scheduled, active, landed)
 
-The system uses bcrypt-hashed passwords with secure session cookies. Multiple user roles are supported for different operational needs.
+### Demo Mode
+- Simulated flight data for demonstrations
+- No API calls made (prevents costs)
+- Showcases full functionality without live data
+
+### Testing
+Comprehensive test suite covering:
+- Password hashing and verification
+- Session lifecycle management
+- Authentication flow
+- Middleware protection
+- Concurrent session access
+
+Run tests with: `go test -v`
 
 ## Design Decisions
 
-- In-memory storage for simplicity (production would use PostgreSQL)
-- Minimal JavaScript for compatibility with older devices
-- Session-based authentication over JWT for reduced complexity
-- Demo mode prevents API costs during demonstrations
-
-## Security
-
-- Bcrypt password hashing
-- HTTP-only session cookies
-- SameSite cookie policy
-- Middleware-protected routes
+- **In-memory storage**: Simplifies deployment; production would use PostgreSQL
+- **Minimal JavaScript**: Ensures compatibility with older iPad devices
+- **Session-based auth**: Simpler than JWT for this use case
+- **Server-side rendering**: Better performance on older hardware
 
 ## Future Improvements
 
-- Persistent database storage
+- Persistent database storage (PostgreSQL)
 - Traffic integration for departure time calculations
-- Notification system for delays
+- Email/SMS notifications for flight delays
 - Multi-location support
-- Historical data analytics
+- Historical flight data and analytics
 
 ## License
 
