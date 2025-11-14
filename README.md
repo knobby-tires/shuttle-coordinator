@@ -72,16 +72,16 @@ Run tests with: `go test -v`
 
 ## Design Decisions
 
-- **In-memory storage**: Simplifies deployment; production would use PostgreSQL
+- **In-memory storage**: Simplifies deployment (larger scale production would use PostGreSQL)
 - **Minimal JavaScript**: Ensures compatibility with older iPad devices
 - **Session-based auth**: Simpler than JWT for this use case
-- **Server-side rendering**: Better performance on older hardware
+- **Server-side rendering**: Better performance on older hardware (locations ipad)
 
 ## Future Improvements
 
 - Persistent database storage (PostgreSQL)
 - Traffic integration for departure time calculations
-- Email/SMS notifications for flight delays
+- Text notifications for flight delays
 - Multi-location support
 - Historical flight data and analytics
 
