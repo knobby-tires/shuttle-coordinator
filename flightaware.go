@@ -6,15 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"time"
 	"os"
+	"time"
 )
 
 var apiKey = os.Getenv("FLIGHTAWARE_API_KEY")
 
-// getFlightStatus fetches real-time flight information from FlightAware API
+// getFlightStatus fetches real-time flight data from FlightAware API
 func getFlightStatus(flightNumber, flightType string, crewCount int) (Flight, error) {
-	// FlightAware AeroAPI endpoint
 	apiURL := fmt.Sprintf("https://aeroapi.flightaware.com/aeroapi/flights/%s", url.QueryEscape(flightNumber))
 
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -37,7 +36,7 @@ func getFlightStatus(flightNumber, flightType string, crewCount int) (Flight, er
 		return Flight{}, fmt.Errorf("Failed to read API response")
 	}
 
-	// Parse FlightAware's JSON response
+	// Parse JSON response from FlightAware
 	var result struct {
 		Flights []struct {
 			Ident        string `json:"ident"`
@@ -60,7 +59,7 @@ func getFlightStatus(flightNumber, flightType string, crewCount int) (Flight, er
 
 	flightData := result.Flights[0]
 
-	// Use the most accurate arrival time available (actual > estimated > scheduled)
+	// Use most accurate time available (actual > estimated > scheduled)
 	arrivalTimeStr := flightData.ScheduledIn
 	if flightData.EstimatedIn != "" {
 		arrivalTimeStr = flightData.EstimatedIn
@@ -83,7 +82,7 @@ func getFlightStatus(flightNumber, flightType string, crewCount int) (Flight, er
 	mountainTime, _ := time.LoadLocation("America/Denver")
 	scheduledMT := scheduledTime.In(mountainTime)
 
-	// Calculate delay in minutes if both scheduled and estimated times exist
+	// Calculate delay by comparing scheduled vs estimated
 	var delay int
 	if flightData.ScheduledIn != "" && flightData.EstimatedIn != "" {
 		scheduledT, _ := time.Parse(time.RFC3339, flightData.ScheduledIn)
@@ -93,7 +92,7 @@ func getFlightStatus(flightNumber, flightType string, crewCount int) (Flight, er
 
 	expectedMT := scheduledMT
 
-	// Get airline name (prefer full name over IATA code)
+	// Prefer full airline name over IATA code
 	airlineName := flightData.Operator
 	if airlineName == "" {
 		airlineName = flightData.OperatorIata

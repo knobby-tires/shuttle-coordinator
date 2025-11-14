@@ -14,6 +14,7 @@ var nextID = 1
 var tmpl *template.Template
 
 func main() {
+	// Initialize HTML templates
 	var err error
 	tmpl, err = template.New("index").Parse(htmlTemplate)
 	if err != nil {
@@ -25,6 +26,7 @@ func main() {
 		panic(err)
 	}
 
+	// Register HTTP routes
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/", requireAuth(homeHandler))
 	http.HandleFunc("/add", requireAuth(addFlightHandler))
@@ -32,16 +34,18 @@ func main() {
 	http.HandleFunc("/update-note", requireAuth(updateNoteHandler))
 	http.HandleFunc("/logout", requireAuth(logoutHandler))
 
-	fmt.Println("🛫 Jacob's Flight Tracker")
+	fmt.Println("Jacob's Flight Tracker")
 	fmt.Println("Server starting on http://localhost:8080")
 	fmt.Println("\nDemo account: demo / demo123")
 	http.ListenAndServe(":8080", nil)
 }
 
+// homeHandler displays all flights sorted by arrival time
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	user := getCurrentUser(r)
 	isDemo := user != nil && user.Role == "demo"
 
+	// Sort flights chronologically by expected arrival
 	sortedFlights := make([]Flight, len(flights))
 	copy(sortedFlights, flights)
 	sort.Slice(sortedFlights, func(i, j int) bool {
@@ -54,6 +58,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// addFlightHandler processes new flight additions
 func addFlightHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -63,11 +68,13 @@ func addFlightHandler(w http.ResponseWriter, r *http.Request) {
 	user := getCurrentUser(r)
 	isDemo := user != nil && user.Role == "demo"
 
+	// Parse form data
 	flightNumber := r.FormValue("flight_number")
 	isPickup := r.FormValue("is_pickup") == "on"
 	isDropoff := r.FormValue("is_dropoff") == "on"
 	crewCount, _ := strconv.Atoi(r.FormValue("crew_count"))
 
+	// Determine operation type
 	flightType := "pickup"
 	if isPickup && isDropoff {
 		flightType = "both"
@@ -78,6 +85,7 @@ func addFlightHandler(w http.ResponseWriter, r *http.Request) {
 	var flight Flight
 	var err error
 
+	// Demo users get fake data, real users get live API data
 	if isDemo {
 		flight = createDemoFlight(flightNumber, flightType, crewCount)
 	} else {
@@ -103,12 +111,15 @@ func addFlightHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// createDemoFlight generates fake flight data for demo accounts
 func createDemoFlight(flightNumber, flightType string, crewCount int) Flight {
 	now := time.Now()
 	mountainTime, _ := time.LoadLocation("America/Denver")
 
+	// Generate arrival time 2-4 hours from now
 	arrivalTime := now.Add(time.Hour * time.Duration(2+nextID%3)).In(mountainTime)
 
+	// Add random delay to some flights
 	delay := 0
 	isDelayed := false
 	if nextID%3 == 0 {
@@ -134,6 +145,7 @@ func createDemoFlight(flightNumber, flightType string, crewCount int) Flight {
 	}
 }
 
+// removeFlightHandler deletes a flight from the tracking list
 func removeFlightHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -152,6 +164,7 @@ func removeFlightHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// updateNoteHandler saves notes for individual flights
 func updateNoteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)

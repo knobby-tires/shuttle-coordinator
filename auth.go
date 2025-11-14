@@ -4,26 +4,26 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
-	"sync"
 	"os"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-// User represents a user account
+// User represents an authenticated account with role-based access
 type User struct {
 	Username     string
 	PasswordHash string
 	Role         string // "valet", "desk", or "demo"
 }
 
-// In-memory session storage (in production, use Redis or similar)
+// Session storage with mutex for concurrent access
 var (
 	sessions = make(map[string]string) // sessionID -> username
 	sessLock sync.RWMutex
 )
 
-// Hardcoded users with bcrypt-hashed passwords
+// Hardcoded users - in production these would be in a database
 var users = map[string]User{
 	"valet": {
 		Username:     "valet",
@@ -42,7 +42,7 @@ var users = map[string]User{
 	},
 }
 
-// hashPassword creates a bcrypt hash of a password
+// hashPassword creates a bcrypt hash from plain text password
 func hashPassword(password string) string {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -51,20 +51,20 @@ func hashPassword(password string) string {
 	return string(hash)
 }
 
-// checkPassword verifies a password against a hash
+// checkPassword verifies a password against a bcrypt hash
 func checkPassword(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-// generateSessionID creates a random session ID
+// generateSessionID creates a cryptographically secure random session ID
 func generateSessionID() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
 
-// createSession creates a new session for a user
+// createSession generates and stores a new session for a user
 func createSession(username string) string {
 	sessLock.Lock()
 	defer sessLock.Unlock()
@@ -74,7 +74,7 @@ func createSession(username string) string {
 	return sessionID
 }
 
-// getSession returns the username for a session ID, or empty string if invalid
+// getSession retrieves username from session ID
 func getSession(sessionID string) string {
 	sessLock.RLock()
 	defer sessLock.RUnlock()
@@ -82,7 +82,7 @@ func getSession(sessionID string) string {
 	return sessions[sessionID]
 }
 
-// deleteSession removes a session
+// deleteSession removes a session (logout)
 func deleteSession(sessionID string) {
 	sessLock.Lock()
 	defer sessLock.Unlock()
@@ -90,7 +90,7 @@ func deleteSession(sessionID string) {
 	delete(sessions, sessionID)
 }
 
-// getCurrentUser returns the User object for the current session
+// getCurrentUser extracts User from request session cookie
 func getCurrentUser(r *http.Request) *User {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
@@ -110,7 +110,7 @@ func getCurrentUser(r *http.Request) *User {
 	return &user
 }
 
-// requireAuth is middleware that checks if user is authenticated
+// requireAuth is middleware that protects routes requiring authentication
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("session_id")
@@ -129,10 +129,10 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// loginHandler displays login page and handles login attempts
+// loginHandler displays login form and processes login attempts
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		// Check if already logged in
+		// Redirect if already logged in
 		cookie, err := r.Cookie("session_id")
 		if err == nil && getSession(cookie.Value) != "" {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -156,6 +156,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Create session and set secure cookie
 		sessionID := createSession(username)
 
 		http.SetCookie(w, &http.Cookie{
@@ -163,15 +164,15 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    sessionID,
 			Path:     "/",
 			MaxAge:   86400 * 7, // 7 days
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
+			HttpOnly: true,      // XSS protection
+			SameSite: http.SameSiteStrictMode, // CSRF protection
 		})
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
-// logoutHandler destroys the session and logs out the user
+// logoutHandler destroys session and clears cookie
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err == nil {
