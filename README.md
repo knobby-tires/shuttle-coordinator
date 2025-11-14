@@ -1,4 +1,6 @@
-# Flight Tracker
+# Jacob's Shuttle Coordinator
+
+![Shuttle Coordinator Screenshot](screenshots/ui-example-screenshot.png)
 
 A real-time flight tracking and shuttle coordination system for managing airport transportation logistics. Tracks flight arrivals/departures, manages crew pickups, and coordinates shuttles with live flight delay information.
 
